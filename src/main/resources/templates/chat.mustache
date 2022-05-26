@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/6b3377d2bb.js" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <title>Document</title>
+</head>
+
+<style>
+    .main-box {
+        display: flex;
+        justify-content: center;
+        margin-top: 50px;
+    }
+
+    .chat-box {
+        border: 1px solid gray;
+        width: 1000px;
+        height: 800px;
+        display: flex;
+        padding: 30px;
+        border-radius: 10px;
+    }
+
+    .chat-list {
+        border: 1px solid gray;
+        width: 75%;
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .text-list {
+        border: 1px solid rgb(220, 220, 220);
+        height: 95%;
+        margin-bottom: 10px;
+        overflow: auto;
+    }
+
+    .session-box {
+        border-right: 1px solid gray;
+        border-top: 1px solid gray;
+        border-bottom: 1px solid gray;
+        width: 25%;
+    }
+
+    .session-list-title {
+        padding-left: 3px;
+        border-bottom: 1px solid gray;
+    }
+
+    .session-list {
+        padding: 0px 0px 5px 3px;
+    }
+</style>
+
+<body>
+    <input id="my-username" type="hidden" value="{{username}}">
+    <div class="main-box">
+        <div class="chat-box">
+            <div class="chat-list">
+                <div id="text-list" class="text-list"></div>
+                <div class="d-flex">
+                    <input id="msg" type="text" style="width: 95%; margin-right: 5px;">
+                    <input id="btn-send" type="button" value="전송">
+                </div>
+            </div>
+            <div class="session-box">
+                <div class="session-list-title">접속자 리스트</div>
+                <div class="session-list">{{username}}</div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    let username = $("#my-username").val();
+    const websocket = new WebSocket("ws://220.77.87.156:8080/ws/chat");
+    websocket.onmessage = onmessage;
+    websocket.onopen = onOpen;
+    websocket.onclose = onClose;
+
+    $("#btn-send").click(() => {
+        send();
+    });
+    // 메세지 보낼 때
+    function send() {
+        let msg = $("#msg").val();
+
+        console.log(username + ":" + msg);
+        websocket.send(username + ":" + msg);
+        $("#msg").val('');
+    }
+
+    //채팅창에서 나갔을 때
+    function onClose(evt) {
+        let str = username + ": 님이 방을 나가셨습니다.";
+        websocket.send(str);
+    }
+
+    //채팅창에 들어왔을 때
+    function onOpen(evt) {
+        let str = username + ": 님이 입장하셨습니다.";
+        let userlist = `<div class='session-list'>${username}</div>`
+        $("#session-list").append(userlist);
+        websocket.send(str);
+    }
+
+    //서버에서 메시지를 받았을 때
+    function onmessage(msg) {
+
+        var data = msg.data;
+        var sessionId = null; //데이터를 보낸 사람
+        var message = null;
+
+        var arr = data.split(":");
+
+        for (var i = 0; i < arr.length; i++) {
+            console.log('arr[' + i + ']: ' + arr[i]);
+        }
+
+        var cur_session = username; //현재 세션에 로그인 한 사람
+        console.log("cur_session : " + cur_session);
+
+        sessionId = arr[0];
+        message = arr[1];
+
+        //로그인 한 클라이언트와 타 클라이언트를 분류하기 위함
+        if (sessionId == cur_session) {
+
+            var str = "<div class='col-6'>";
+            str += "<div class='alert alert-secondary'>";
+            str += "<b>" + sessionId + " : " + message + "</b>";
+            str += "</div></div>";
+
+            $("#text-list").append(str);
+        }
+        else {
+
+            var str = "<div class='col-6'>";
+            str += "<div class='alert alert-warning'>";
+            str += "<b>" + sessionId + " : " + message + "</b>";
+            str += "</div></div>";
+
+            $("#text-list").append(str);
+        }
+
+    }
+</script>
+
+</html>
